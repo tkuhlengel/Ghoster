@@ -109,11 +109,13 @@ WinSet,Transparent,%transparency%,%applicationname%Window
 LOOP:
 Sleep,50
 WinGet,winid,ID,A
-If winid<>%oldid%
-{
-  WinGet,wintop,ExStyle,ahk_id %winid%
-  wintop:=wintop & 0x8
-
+;WinSet,AlwaysOnTop,On,ahk_id %winid%
+;winid:=WinActive(A)
+;If winid<>%oldid%
+;{
+  WinGet,wintopstyle,ExStyle,ahk_id %winid%
+  wintop:=wintopstyle & 0x8
+;MsgBox winid %winid%, OldID %oldid%, winTop %wintop%;%LeftCoord% Y%TopCoord%
   If showdesktop
     If winid=%progmanid%
       WinMove,%A_ScreenWidth%,%A_ScreenHeight%,,,%applicationname%Window
@@ -122,8 +124,8 @@ If winid<>%oldid%
         WinMove,0,0,,,%applicationname%Window
 
   If jump
-  If !wintop
-    WinSet,AlwaysOnTop,On,ahk_id %winid%
+  If (!wintop)
+	WinSet,AlwaysOnTop,On,ahk_id %winid%
 
   If showontop
     WinSet,Top,,%applicationname%Window
@@ -139,10 +141,12 @@ If winid<>%oldid%
 ;      ,Uint,guiid,Int,0,Int,0,Int,0,Int,0 
 ;      ,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
   }
+If winid<>%oldid%
+{
   If !oldtop
     WinSet,AlwaysOnTop,Off,ahk_id %oldid%
-;  Else
-;    WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+  Else
+    WinSet,AlwaysOnTop,Off,ahk_id %oldid%
 
   oldid=%winid%
   oldtop=%wintop%
@@ -313,6 +317,8 @@ EXIT:
 WinActivate,ahk_class Shell_TrayWnd
 WinWaitActive,ahk_class Shell_TrayWnd,,1
 Gosub,DESTROY
+WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+WinSet,AlwaysOnTop,Off,ahk_id %winid%
 WinActivate,ahk_id %oldid%
 ExitApp 
 
