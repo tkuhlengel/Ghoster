@@ -1,13 +1,14 @@
 ;Ghoster.ahk
 ; Dims inactive windows, shows a transparent image across the desktop, 
 ;Skrommel @2005
+;tkuhlengel Revised 2018
 
 #NoEnv
 #SingleInstance,Force
 SetBatchLines,-1
 SetWindelay,0
 
-applicationname=Ghoster
+applicationname=Ghoster2
 
 OnExit,EXIT
 
@@ -16,6 +17,7 @@ Gosub,READINI
 Gosub,TRAYMENU
 CoordMode,Mouse,Screen
 WinGet,progmanid,Id,ahk_class Progman
+
 WinGet,oldid,ID,A
 WinGet,oldtop,ExStyle,ahk_id %oldid%
 oldtop:=oldtop & 0x8
@@ -68,62 +70,87 @@ If backcolor<>
 If image<>
   Gui,Add,Picture,%params%,%image%
 Gui,Show,X%LeftCoord% Y%TopCoord% W%desktopw% H%desktoph%, %applicationname%Window
-;Gui,Show,%params%,%applicationname%Window
 Gui,+LastFound
 guiid:=WinExist("A")
 WinSet,Transparent,%transparency%,%applicationname%Window
 
-
+IsHidden:=0
+DesktopActive:=0
 LOOP:
 Sleep,50
+If (IsHidden=1)
+{
+	Goto,LOOP
+}
 WinGet,winid,ID,A
-;WinSet,AlwaysOnTop,On,ahk_id %winid%
-;winid:=WinActive(A)
-;If winid<>%oldid%
-  WinGet,wintopstyle,ExStyle,ahk_id %winid%
-  wintop:=wintopstyle & 0x8
-;MsgBox winid %winid%, OldID %oldid%, winTop %wintop%;%LeftCoord% Y%TopCoord%
-  If (showdesktop) {
-    If (winid=%progmanid%) {
-	; If the background or desktop is what was clicked on (i.e. the transparent window), hide the window by moving it offscreen
-;WinMove,%LeftCoord%+%desktopw%,%TopCoord%+%desktoph%,,,%applicationname%Window
-	  WinSet,Transparent,0,%applicationname%Window
+WinGet,wintopstyle,ExStyle,ahk_id %winid%
+WinGetTitle,winActiveTitle,A
+wintop:=wintopstyle & 0x8
+
+If (showdesktop) 
+{
+	if (winActiveTitle=%applicationname%) 
+	{
+		DesktopActive:=1
+		WinHide,%applicationname%Window
 	}
+    ;If (winid=%progmanid%) 
+	;{
+		; If the background or desktop is what was clicked onm change tranparency
+	;	WinHide,%applicationname%Window
+	;}
 	  ;WinMove,%A_ScreenWidth%,%A_ScreenHeight%,,,%applicationname%Window
-    Else {
-		If (oldid=%progmanid%){
+    Else If (oldTitle=%applicationname%)
+	{
 			;WinMove,%LeftCoord%,%TopCoord%,,,%applicationname%Window
-			WinSet,Transparent,%transparency%,%applicationname%Window
-		}
+			;WinSet,Transparent,%transparency%,%applicationname%Window
+			WinShow,%applicationname%Window
+			DesktopActive:=0
 	}
-	If (jump and !(winid=%progmanid%)){  ;Show the active window on top of the ghosting.
-		If (!wintop){
-			WinSet,AlwaysOnTop,On,ahk_id %winid%
-		}
+}
+Else
+{
+	If (winActiveTitle=%applicationname%) 
+	{
+		DesktopActive:=1
 	}
-  If showontop
-    WinSet,Top,,%applicationname%Window
-  Else
-  {
-    SWP_NOMOVE=2 
-    SWP_NOSIZE=1 
-    SWP_NOACTIVATE=0x10 
-    DllCall("SetWindowPos",Uint,guiid 
-      ,Uint,winid,Int,0,Int,0,Int,0,Int,0 
-      ,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
+	Else If (oldTitle=%applicationname%) 
+	{
+		DesktopActive:=0
+	}
+}
+If (jump) ; and !(winid=%progmanid%))
+{  ;Show the active window on top of the ghosting.
+	If (!wintop and DesktopActive!=1)
+	{
+		WinSet,AlwaysOnTop,On,ahk_id %winid%
+	}
+}
+If (showontop){
+	WinSet,Top,,%applicationname%Window
+}
+Else
+{
+	SWP_NOMOVE=2 
+	SWP_NOSIZE=1 
+	SWP_NOACTIVATE=0x10 
+	DllCall("SetWindowPos",Uint,guiid 
+		,Uint,winid,Int,0,Int,0,Int,0,Int,0 
+		,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
 ;    DllCall("SetWindowPos",Uint,WinExist("ahk_class Shell_TrayWnd") 
 ;      ,Uint,guiid,Int,0,Int,0,Int,0,Int,0 
 ;      ,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
   }
 If winid<>%oldid%
 {
-  If !oldtop
-    WinSet,AlwaysOnTop,Off,ahk_id %oldid%
-  Else
-    WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+	If !oldtop
+		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+	Else
+		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
 
-  oldid=%winid%
-  oldtop=%wintop%
+	oldid=%winid%
+	oldtop=%wintop%
+	oldTitle=%winActiveTitle%
 }
 Goto,LOOP
 
@@ -141,7 +168,7 @@ IfNotExist,%applicationname%.ini
   ini=%ini%`n`;stretchwidth=1 or 0        Makes the image fill the width of the screen.
   ini=%ini%`n`;stretchheight=1 or 0       Makes the image fill the height of the screen.
   ini=%ini%`n`;keepaspect=1               Keeps the image from distorting.
-  ini=%ini%`n`;transparency=0-255         Makes the ghosting more or less translucent.
+  ini=%ini%`n`;transparency=0-255         Makes the ghosting more or less translucent. 255 = opaque
   ini=%ini%`n`;jump=1 or 0                Makes the active window show through the ghosting.
   ini=%ini%`n`;showdesktop=1 or 0         Removes the ghosting when the desktop is active.
   ini=%ini%`n`;showontop=1 or 0           Removes ghosting from ontop windows like the taskbar.
@@ -286,7 +313,41 @@ WM_MOUSEMOVE(wParam,lParam)
 }
 Return
 
+WINDOWINFO:
+  MouseGetPos,winX,winY,winUniqueID
+  WinGet,winIdTemp,ID,ahk_id %winUniqueID%
+  WinGetTitle,winTitle,A
+  WinGet,winTopExStyle,ExStyle,ahk_id %winIdTemp%
+  WinGet,winPid,PID,ahk_id %winIdTemp%
+  MsgBox WindowName %winTitle%`nWindowIdentifier %winUniqueID%`nWinStyle %winTopExStyle%
+Return
+
+; Ctrl+Shift+I: Temporary tool to display information about the active window
+^+i::Goto,WINDOWINFO
+
+; Exit macro Ctrl+Shift+Q
 ^+q::Goto,EXIT
+
+^+`::Goto,HIDE
+
+
+HIDE:
+	;MsgBox(Ctrl+Shift+` clicked,,Note,1)
+	If (IsHidden=0)
+	{
+		IsHidden:=1
+		WinHide,%applicationname%Window
+		;WinSet,Transparent,0,%applicationname%Window
+	}
+	Else
+	{
+		IsHidden:=0
+		;WinSet,Transparent,%transparency%,%applicationname%Window
+		WinShow,%applicationname%Window
+	}
+	;Goto,LOOP
+Return
+
 
 EXIT:
 WinActivate,ahk_class Shell_TrayWnd
