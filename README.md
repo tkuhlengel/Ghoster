@@ -1,5 +1,5 @@
 # Ghoster2
-A fork of ghoster, http://www.dcmembers.com/skrommel/download/ghoster/
+A significant revision of Ghoster, one of Skrommel's  http://www.dcmembers.com/skrommel/download/ghoster/
 
 The purpose of this fork is to improve on Ghoster's Multi-monitor funcionality, and improve some of the bugs it experiences.
 
@@ -7,8 +7,10 @@ I took it upon myself to fix this useful tool, as no other free option met my ne
 
 # Keyboard Shortcuts
 Ctrl+Shift+Q Exits the program.
+
 Ctrl+Shift+` (backtick/tilde) Temporarily disables/enables the darkening effect.
-Ctrl+Shift+I Shows information about the window under the mouse.OB 
+
+Ctrl+Shift+I Shows information about the window under the mouse.  This was more for me, and can be disabled for anyone else on request.
 
 # Known Issues:
   1. Right clicking/opening a menu before a window is activated will put the menu behind the newly-activated window.  Temporary Solution: Left click the window to bring it to the front before opening any menus or popups.
