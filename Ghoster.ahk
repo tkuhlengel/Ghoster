@@ -24,38 +24,6 @@ params=
 If multimon=1
 {
 ;  SysGet,nMon,MonitorCount
-;  desktopw:=mon1Right
-;  desktopL:=mon1Left
-;  nCurrMon:=0
-;  Loop{
-;	nCurrMon++
-;	SysGet,mon1,Monitor,nCurrMon
-;  } Until nCurrMon=nMon
-;  SysGet,mon1,Monitor,1
-;  SySGet,mon2,Monitor,2
-;  SysGet,mon3,Monitor,3
-;  SySGet,mon4,Monitor,4
-;  desktopw:=mon1Right
-;  desktopL:=mon1Left
-;  If mon2Right>%desktopw%
-;    desktopw:=mon2Right
-;  If mon3Right>%desktopw%
-;    desktopw:=mon3Right
-;  If mon4Right>%desktopw%
-;    desktopw:=mon4Right
-;  If mon2Left<%desktopL%
-;    desktopL:=mon2Left
-;  If mon3Left<%desktopL%
-;    desktopL:=mon3Left
-;  If mon4Left<%desktopL%
-;    desktopL:=mon4Left
-;  desktoph:=mon1Bottom
-;  If mon2Bottom>%desktoph%
-;    desktoph:=mon2Bottom
-;  If mon3Bottom>%desktoph%
-;    desktoph:=mon3Bottom
-;  If mon4Bottom>%desktoph%
-;    desktoph:=mon4Bottom
  SysGet,desktopw,78
  SysGet,desktoph,79
  SysGet,LeftCoord,76
@@ -66,9 +34,9 @@ Else
 {
   desktopw=%desktopw%
   desktoph=%desktoph%
+  LeftCoord:=0
+  TopCoord:=0
 }
-;MsgBox %desktopw% %desktoph% ; This will display only the numbers 20 through 25
-;MsgBox X%LeftCoord% Y%TopCoord%
 If stretchwidth=1
 {
   width=%desktopw%
@@ -93,13 +61,13 @@ If width<>
 If height<>
   params=%params% H%height%
   
-Gui,+ToolWindow -Disabled -SysMenu -Caption +E0x20 ;+AlwaysOnTop 
+Gui,+ToolWindow -Disabled -SysMenu -Caption +E0x20 AlwaysOnTop 
 Gui,Margin,0,0
 If backcolor<>
   Gui,Color,%backcolor% 
 If image<>
   Gui,Add,Picture,%params%,%image%
-Gui,Show,X%LeftCoord% Y%TopCoord% W%desktopw% H%desktoph%,%applicationname%Window
+Gui,Show,X%LeftCoord% Y%TopCoord% W%desktopw% H%desktoph%, %applicationname%Window
 ;Gui,Show,%params%,%applicationname%Window
 Gui,+LastFound
 guiid:=WinExist("A")
@@ -112,21 +80,27 @@ WinGet,winid,ID,A
 ;WinSet,AlwaysOnTop,On,ahk_id %winid%
 ;winid:=WinActive(A)
 ;If winid<>%oldid%
-;{
   WinGet,wintopstyle,ExStyle,ahk_id %winid%
   wintop:=wintopstyle & 0x8
 ;MsgBox winid %winid%, OldID %oldid%, winTop %wintop%;%LeftCoord% Y%TopCoord%
-  If showdesktop
-    If winid=%progmanid%
-      WinMove,%A_ScreenWidth%,%A_ScreenHeight%,,,%applicationname%Window
-    Else
-      If oldid=%progmanid%
-        WinMove,0,0,,,%applicationname%Window
-
-  If jump
-  If (!wintop)
-	WinSet,AlwaysOnTop,On,ahk_id %winid%
-
+  If (showdesktop) {
+    If (winid=%progmanid%) {
+	; If the background or desktop is what was clicked on (i.e. the transparent window), hide the window by moving it offscreen
+;WinMove,%LeftCoord%+%desktopw%,%TopCoord%+%desktoph%,,,%applicationname%Window
+	  WinSet,Transparent,0,%applicationname%Window
+	}
+	  ;WinMove,%A_ScreenWidth%,%A_ScreenHeight%,,,%applicationname%Window
+    Else {
+		If (oldid=%progmanid%){
+			;WinMove,%LeftCoord%,%TopCoord%,,,%applicationname%Window
+			WinSet,Transparent,%transparency%,%applicationname%Window
+		}
+	}
+	If (jump and !(winid=%progmanid%)){  ;Show the active window on top of the ghosting.
+		If (!wintop){
+			WinSet,AlwaysOnTop,On,ahk_id %winid%
+		}
+	}
   If showontop
     WinSet,Top,,%applicationname%Window
   Else
@@ -247,7 +221,7 @@ Gui,99:Destroy
 Gui,99:Margin,20,20
 Gui,99:Add,Picture,xm Icon1,%applicationname%.exe
 Gui,99:Font,Bold
-Gui,99:Add,Text,x+10 yp+10,%applicationname% v1.2
+Gui,99:Add,Text,x+10 yp+10,%applicationname% v2.0
 Gui,99:Font
 Gui,99:Add,Text,y+10,Dims inactive windows and shows a transparent image across the screen
 Gui,99:Add,Text,y+10,- Change the image and other settings using Settings in the tray menu
@@ -312,6 +286,7 @@ WM_MOUSEMOVE(wParam,lParam)
 }
 Return
 
+^+q::Goto,EXIT
 
 EXIT:
 WinActivate,ahk_class Shell_TrayWnd
