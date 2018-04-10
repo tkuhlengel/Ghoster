@@ -73,15 +73,28 @@ Gui,Show,X%LeftCoord% Y%TopCoord% W%desktopw% H%desktoph%, %applicationname%Wind
 Gui,+LastFound
 guiid:=WinExist("A")
 WinSet,Transparent,%transparency%,%applicationname%Window
-
+WinGetPos,Xlast,Ylast,Wlast,Hlast,A
 IsHidden:=0
 DesktopActive:=0
+LoopCounter:=0
+ForceRedraw:=1
+OnTopArray := [] ; or Array := Array()
 LOOP:
-Sleep,50
+; Sleep,%UpdateCheckInterval%
 If (IsHidden=1)
 {
+	Sleep,%UpdateCheckInterval%
 	Goto,LOOP
 }
+
+LoopCounter:= LoopCounter+UpdateCheckInterval
+If(LoopCounter > RefreshInterval)
+{
+	ForceRedraw:=1
+	Gosub,REDRAW
+	LoopCounter:=0
+}
+
 WinGet,winid,ID,A
 WinGet,wintopstyle,ExStyle,ahk_id %winid%
 WinGetTitle,winActiveTitle,A
@@ -89,18 +102,12 @@ wintop:=wintopstyle & 0x8
 
 If (showdesktop) 
 {
-	if (winActiveTitle=%applicationname%) 
+	if (winActiveTitle=%applicationname% or winActiveTitle="Program Manager") 
 	{
 		DesktopActive:=1
 		WinHide,%applicationname%Window
 	}
-    ;If (winid=%progmanid%) 
-	;{
-		; If the background or desktop is what was clicked onm change tranparency
-	;	WinHide,%applicationname%Window
-	;}
-	  ;WinMove,%A_ScreenWidth%,%A_ScreenHeight%,,,%applicationname%Window
-    Else If (oldTitle=%applicationname%)
+    Else If (oldTitle=%applicationname% or oldTitle="Program Manager")
 	{
 			;WinMove,%LeftCoord%,%TopCoord%,,,%applicationname%Window
 			;WinSet,Transparent,%transparency%,%applicationname%Window
@@ -124,37 +131,61 @@ If (jump) ; and !(winid=%progmanid%))
 	If (!wintop and DesktopActive!=1)
 	{
 		WinSet,AlwaysOnTop,On,ahk_id %winid%
+		LoopCounter:=0
 	}
 }
 If (showontop){
-	WinSet,Top,,%applicationname%Window
+	;WinSet,Top,,%applicationname%Window
+	SWP_NOMOVE=2 
+	SWP_NOSIZE=1 
+	SWP_NOACTIVATE=0x10 
+	DllCall("SetWindowPos",Uint,WinExist("ahk_class Shell_TrayWnd"),Uint,guiid,Int,0,Int,0,Int,0,Int,0 ,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
 }
 Else
 {
 	SWP_NOMOVE=2 
 	SWP_NOSIZE=1 
 	SWP_NOACTIVATE=0x10 
-	DllCall("SetWindowPos",Uint,guiid 
-		,Uint,winid,Int,0,Int,0,Int,0,Int,0 
-		,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
-;    DllCall("SetWindowPos",Uint,WinExist("ahk_class Shell_TrayWnd") 
-;      ,Uint,guiid,Int,0,Int,0,Int,0,Int,0 
-;      ,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
-  }
+	DllCall("SetWindowPos",Uint,guiid ,Uint,winid,Int,0,Int,0,Int,0,Int,0,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
+
+}
 If winid<>%oldid%
 {
 	If !oldtop
 		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
-	Else
-		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+	;Else
+	;	WinSet,AlwaysOnTop,Off,ahk_id %oldid%
 
 	oldid=%winid%
 	oldtop=%wintop%
 	oldTitle=%winActiveTitle%
+	WinGetPos,Xlast,Ylast,Wlast,Hlast,A
 }
+If (IsHidden<>1)
+{
+	Gosub,REDRAW
+}
+Sleep,%UpdateCheckInterval%
 Goto,LOOP
 
-
+REDRAW:
+	WinGetPos,Xcurr,Ycurr,Wcurr,Hcurr,A
+	; If the window moved.
+	if(ForceRedraw=1 or Xcurr<>Xlast or Ycurr<>Ylast or Wlast<>Wcurr or Hlast<>Hcurr)
+	{
+		WinSet,Redraw,,%applicationname%Window
+		WinSet,AlwaysOnTop,On,ahk_id %winid%
+		;DllCall("SetWindowPos",Uint,guiid,Uint,winid,Int,0,Int,0,Int,0,Int,0,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE)
+		LoopCounter:=0
+		ForceRedraw:=0
+	}
+	Xlast=%Xcurr%
+	Ylast=%Ycurr%
+	Wlast=%Wcurr%
+	Hlast=%Hcurr%
+	
+Return
+	
 READINI:
 IfNotExist,%applicationname%.ini 
 {
@@ -168,6 +199,8 @@ IfNotExist,%applicationname%.ini
   ini=%ini%`n`;stretchwidth=1 or 0        Makes the image fill the width of the screen.
   ini=%ini%`n`;stretchheight=1 or 0       Makes the image fill the height of the screen.
   ini=%ini%`n`;keepaspect=1               Keeps the image from distorting.
+  ini=%ini%`n`;RefreshInterval=3000       Number of Milliseconds between force redraw of the overlay screen.
+  ini=%ini%`n`;UpdateCheckInterval=50     Time in milliseconds between loop iterations.  Longer values slow updating of the top window, shorter ones require more CPU time.
   ini=%ini%`n`;transparency=0-255         Makes the ghosting more or less translucent. 255 = opaque
   ini=%ini%`n`;jump=1 or 0                Makes the active window show through the ghosting.
   ini=%ini%`n`;showdesktop=1 or 0         Removes the ghosting when the desktop is active.
@@ -184,6 +217,8 @@ IfNotExist,%applicationname%.ini
   ini=%ini%`nstretchwidth=1
   ini=%ini%`nstretchheight=1
   ini=%ini%`nkeepaspect=1
+  ini=%ini%`nRefreshInterval=3000
+  ini=%ini%`nUpdateCheckInterval=50
   ini=%ini%`ntransparency=150
   ini=%ini%`njump=1
   ini=%ini%`nshowdesktop=1
@@ -203,6 +238,8 @@ IniRead,height,%applicationname%.ini,Settings,height
 IniRead,stretchwidth,%applicationname%.ini,Settings,stretchwidth
 IniRead,stretchheight,%applicationname%.ini,Settings,stretchheight
 IniRead,keepaspect,%applicationname%.ini,Settings,keepaspect
+IniRead,RefreshInterval,%applicationname%.ini,Settings,RefreshInterval
+IniRead,UpdateCheckInterval,%applicationname%.ini,Settings,UpdateCheckInterval
 IniRead,transparency,%applicationname%.ini,Settings,transparency
 IniRead,jump,%applicationname%.ini,Settings,jump
 IniRead,showdesktop,%applicationname%.ini,Settings,showdesktop
