@@ -79,14 +79,23 @@ DesktopActive:=0
 LoopCounter:=0
 ForceRedraw:=1
 OnTopArray := [] ; or Array := Array()
+
+
 LOOP:
 ; Sleep,%UpdateCheckInterval%
+
+
+WinGet,winid,ID,A
+
+; Ignore stuff if
 If (IsHidden=1)
 {
 	Sleep,%UpdateCheckInterval%
 	Goto,LOOP
 }
-
+WinGet,wintopstyle,ExStyle,ahk_id %winid%
+WinGetTitle,winActiveTitle,A
+wintop:=wintopstyle & 0x8
 LoopCounter:= LoopCounter+UpdateCheckInterval
 If(LoopCounter > RefreshInterval)
 {
@@ -94,11 +103,6 @@ If(LoopCounter > RefreshInterval)
 	Gosub,REDRAW
 	LoopCounter:=0
 }
-
-WinGet,winid,ID,A
-WinGet,wintopstyle,ExStyle,ahk_id %winid%
-WinGetTitle,winActiveTitle,A
-wintop:=wintopstyle & 0x8
 
 If (showdesktop) 
 {
@@ -146,13 +150,15 @@ Else
 	SWP_NOMOVE=2 
 	SWP_NOSIZE=1 
 	SWP_NOACTIVATE=0x10 
+	WinSet,AlwaysOnTop,On,ahk_id %winid%
 	DllCall("SetWindowPos",Uint,guiid ,Uint,winid,Int,0,Int,0,Int,0,Int,0,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE) 
 
 }
 If winid<>%oldid%
 {
-	If !oldtop
-		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+	WinSet,Top,Off,ahk_id %oldid%
+	;If !oldtop
+	;	WinSet,AlwaysOnTop,Off,ahk_id %oldid%
 	;Else
 	;	WinSet,AlwaysOnTop,Off,ahk_id %oldid%
 
@@ -260,6 +266,32 @@ Menu,Tray,Add,E&xit,EXIT
 Menu,Tray,Default,%applicationname%
 Return
 
+HIDE:
+	;MsgBox(Ctrl+Shift+` clicked,,Note,1)
+	If (IsHidden=0)
+	{
+		IsHidden:=1
+		WinHide,%applicationname%Window
+		WinSet,AlwaysOnTop,Off,ahk_id %winid%
+		;WinSet,Transparent,0,%applicationname%Window
+	}
+	Else
+	{
+		IsHidden:=0
+		;WinSet,Transparent,%transparency%,%applicationname%Window
+		WinShow,%applicationname%Window
+		WinSet,AlwaysOnTop,On,ahk_id %winid%
+	}
+	;Goto,LOOP
+Return
+WINDOWINFO:
+  MouseGetPos,winX,winY,winUniqueID
+  WinGet,winIdTemp,ID,ahk_id %winUniqueID%
+  WinGetTitle,winTitle,A
+  WinGet,winTopExStyle,ExStyle,ahk_id %winIdTemp%
+  WinGet,winPid,PID,ahk_id %winIdTemp%
+  MsgBox WindowName %winTitle%`nWindowIdentifier %winUniqueID%`nWinStyle %winTopExStyle%
+Return
 
 SETTINGS:
 Run,%applicationname%.ini
@@ -276,6 +308,7 @@ If oldtop
   WinSet,AlwaysOnTop,On,ahk_id %oldid%
 Else
   WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+WinSet,AlwaysOnTop,Off,ahk_id %winid%
 Gui,Destroy
 Return
 
@@ -350,17 +383,9 @@ WM_MOUSEMOVE(wParam,lParam)
 }
 Return
 
-WINDOWINFO:
-  MouseGetPos,winX,winY,winUniqueID
-  WinGet,winIdTemp,ID,ahk_id %winUniqueID%
-  WinGetTitle,winTitle,A
-  WinGet,winTopExStyle,ExStyle,ahk_id %winIdTemp%
-  WinGet,winPid,PID,ahk_id %winIdTemp%
-  MsgBox WindowName %winTitle%`nWindowIdentifier %winUniqueID%`nWinStyle %winTopExStyle%
-Return
 
 ; Ctrl+Shift+I: Temporary tool to display information about the active window
-^+i::Goto,WINDOWINFO
+; ^+i::Goto,WINDOWINFO
 
 ; Exit macro Ctrl+Shift+Q
 ^+q::Goto,EXIT
@@ -368,22 +393,7 @@ Return
 ^+`::Goto,HIDE
 
 
-HIDE:
-	;MsgBox(Ctrl+Shift+` clicked,,Note,1)
-	If (IsHidden=0)
-	{
-		IsHidden:=1
-		WinHide,%applicationname%Window
-		;WinSet,Transparent,0,%applicationname%Window
-	}
-	Else
-	{
-		IsHidden:=0
-		;WinSet,Transparent,%transparency%,%applicationname%Window
-		WinShow,%applicationname%Window
-	}
-	;Goto,LOOP
-Return
+
 
 
 EXIT:
