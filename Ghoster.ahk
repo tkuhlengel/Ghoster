@@ -151,15 +151,18 @@ Else
 }
 If winid<>%oldid%
 {
-	If !oldtop
+	If (!oldtop) 
+	{
 		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
-	;Else
-	;	WinSet,AlwaysOnTop,Off,ahk_id %oldid%
-
+	}
+	Else  ;I'm ignoring the cases where you have a window being forced on top.
+	{
+		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+	}
 	oldid=%winid%
 	oldtop=%wintop%
 	oldTitle=%winActiveTitle%
-	WinGetPos,Xlast,Ylast,Wlast,Hlast,A
+	WinGetPos,Xlast,Ylast,Wlast,Hlast,A  ; needed for REDRAW
 }
 If (IsHidden<>1)
 {
@@ -174,8 +177,9 @@ REDRAW:
 	if(ForceRedraw=1 or Xcurr<>Xlast or Ycurr<>Ylast or Wlast<>Wcurr or Hlast<>Hcurr)
 	{
 		WinSet,Redraw,,%applicationname%Window
-		WinSet,AlwaysOnTop,On,ahk_id %winid%
-		;DllCall("SetWindowPos",Uint,guiid,Uint,winid,Int,0,Int,0,Int,0,Int,0,Uint,SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE)
+		;WinSet,AlwaysOnTop,On,ahk_id %winid%
+		;WinHide,%applicationname%Window
+		;WinShow,%applicationname%Window
 		LoopCounter:=0
 		ForceRedraw:=0
 	}
@@ -186,6 +190,24 @@ REDRAW:
 	
 Return
 	
+HIDE:
+	;MsgBox(Ctrl+Shift+` clicked,,Note,1)
+	If (IsHidden=0)
+	{
+		IsHidden:=1
+		WinHide,%applicationname%Window
+		WinSet,AlwaysOnTop,Off,ahk_id %winid%
+		WinSet,AlwaysOnTop,Off,ahk_id %oldid%
+		;WinSet,Transparent,0,%applicationname%Window
+	}
+	Else
+	{
+		IsHidden:=0
+		;WinSet,Transparent,%transparency%,%applicationname%Window
+		WinShow,%applicationname%Window
+	}
+	;Goto,LOOP
+Return
 READINI:
 IfNotExist,%applicationname%.ini 
 {
@@ -360,7 +382,7 @@ WINDOWINFO:
 Return
 
 ; Ctrl+Shift+I: Temporary tool to display information about the active window
-^+i::Goto,WINDOWINFO
+;  ^+i::Goto,WINDOWINFO
 
 ; Exit macro Ctrl+Shift+Q
 ^+q::Goto,EXIT
@@ -368,22 +390,7 @@ Return
 ^+`::Goto,HIDE
 
 
-HIDE:
-	;MsgBox(Ctrl+Shift+` clicked,,Note,1)
-	If (IsHidden=0)
-	{
-		IsHidden:=1
-		WinHide,%applicationname%Window
-		;WinSet,Transparent,0,%applicationname%Window
-	}
-	Else
-	{
-		IsHidden:=0
-		;WinSet,Transparent,%transparency%,%applicationname%Window
-		WinShow,%applicationname%Window
-	}
-	;Goto,LOOP
-Return
+
 
 
 EXIT:
